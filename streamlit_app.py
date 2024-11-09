@@ -5,9 +5,14 @@ import time
 import mediapipe as mp
 import numpy as np
 from datetime import datetime
+import random
+import requests
+
 
 # Welcome Page
 def welcome_page():
+    if "start_time" not in st.session_state:
+        st.session_state.start_time = time.time()  # Record the start time when the Home Page is first loaded
     st.title("Khel Maidaan App")
     st.markdown("""<style>
         .container {
@@ -41,8 +46,10 @@ def welcome_page():
 def registration_page():
     st.title("User Registration")
     with st.form(key="registration_form"):
-        name = st.text_input("Full Name")
-        age = st.number_input("Age", min_value=5, max_value=100)
+        time_spent_on_app = round((time.time() - st.session_state.start_time) / 60, 2)  # Time in minutes
+        name = st.text_input("Parent Name")
+        name = st.text_input("Child Name")
+        age = st.number_input("Child Age", min_value=5, max_value=16)
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
         confirm_password = st.text_input("Confirm Password", type="password")
@@ -228,16 +235,137 @@ def hand_game_page():
     cap.release()
     cv2.destroyAllWindows()
 
+# Mental Math Game Page
+def mental_math_game_page():
+
+    st.title("Interactive Mental Math Game")
+
+    # Fixed set of 5 questions
+    questions = [
+        {"question": "5 + 3", "answer": 8},
+        {"question": "12 - 7", "answer": 5},
+        {"question": "8 * 6", "answer": 48},
+        {"question": "18 / 3", "answer": 6},
+        {"question": "15 + 2", "answer": 17}
+    ]
+    
+    correct_answers = 0
+
+    # Ask the questions one by one
+    for i, q in enumerate(questions):
+        st.subheader(f"Question {i + 1}: {q['question']}")
+        user_answer = st.text_input("Your answer:", key=f"answer_{i}")
+
+        # Check the answer when the user submits
+        if user_answer:
+            try:
+                if float(user_answer) == q["answer"]:
+                    st.success("Correct! 🎉")
+                    correct_answers += 1
+                else:
+                    st.error(f"Wrong! The correct answer is {q['answer']}.")
+            except ValueError:
+                st.error("Please enter a valid number.")
+
+    # Show the score after all questions
+    if correct_answers > 0:
+        st.markdown(f"**You answered {correct_answers}/{len(questions)} questions correctly!**")
+    else:
+        st.markdown("**You didn't get any correct answers. Better luck next time!**")
+
+# Simple emotion detection for demo purposes
+def detect_emotion(text):
+    emotions = {
+        "happy": ["happy", "joy", "excited", "good", "great"],
+        "sad": ["sad", "depressed", "down", "blue", "low"],
+        "angry": ["angry", "frustrated", "mad", "upset", "rage"],
+        "neutral": ["okay", "fine", "alright", "neutral", "calm"]
+    }
+    
+    text = text.lower()
+    for emotion, keywords in emotions.items():
+        if any(keyword in text for keyword in keywords):
+            return emotion
+    return "neutral"  # Default if no emotion found
+
+# Simple chatbot response generator
+def chatbot_response(emotion):
+    responses = {
+        "happy": "That's great to hear! Keep up the positivity!",
+        "sad": "I'm sorry you're feeling this way. I'm here if you need to talk.",
+        "angry": "I understand you're upset. Would you like to discuss what's bothering you?",
+        "neutral": "I see you're calm. Let me know if you'd like to talk."
+    }
+    return responses.get(emotion, "How can I assist you today?")
+
+# Chatbot Page
+def chatbot_page():
+    st.title("Chat with the Bot")
+
+    # User input for chatting
+    user_message = st.text_input("How are you feeling today?", "")
+
+    if user_message:
+        # Detect emotion from user's message
+        emotion = detect_emotion(user_message)
+        response = chatbot_response(emotion)
+        
+        # Display user message and bot response
+        st.write(f"**You:** {user_message}")
+        st.write(f"**Bot:** {response}")
+    
+    else:
+        st.write("Please share your feelings or thoughts, and I'll try to understand.")
+     
+# Digital Wellbeing Page
+def digital_wellbeing_page():
+    st.title("Digital Wellbeing")
+
+    # Calculate time spent on the app from the Home Page
+    time_spent_on_app = round((time.time() - st.session_state.start_time) / 60, 2)  # Time in minutes
+    st.write(f"**Time spent on the app so far:** {time_spent_on_app} minutes")
+
+    # Form to record child's activity
+    with st.form(key='digital_wellbeing_form'):
+        # Child's Name (Assuming you want to auto-fill this based on the registration)
+        child_name = st.text_input("Record Name", placeholder="Enter the record name")
+
+        # Activity Selection
+        activity = st.selectbox("What was your child doing? (apart from the app)", ["Playing a Game", "Reading", "Watching TV", "Learning", "Other"])
+
+        # Time Spent Input (in minutes)
+        time_spent = st.number_input("Time spent (in minutes)", min_value=0, step=1)
+
+        # Additional Comments (Optional)
+        comments = st.text_area("Additional Comments", placeholder="Any other details...")
+
+        # Submit button
+        submit_button = st.form_submit_button(label='Submit Activity Record')
+
+        if submit_button:
+            if child_name and time_spent > 0:
+                # Display entered information
+                st.write(f"**Child's Name:** {child_name}")
+                st.write(f"**Activity:** {activity}")
+                st.write(f"**Time Spent:** {time_spent} minutes")
+                st.write(f"**Time spent on the app:** {time_spent_on_app} minutes")
+                if comments:
+                    st.write(f"**Comments:** {comments}")
+                st.success("Activity record submitted successfully!")
+            else:
+                st.error("Please provide the child's name and time spent.")     
+
+
 # Main function to render the pages based on user choice
 def main():
-    st.set_page_config(page_title="Healthy Mobile Usage App", page_icon="🧒", layout="wide")
+    st.set_page_config(page_title="Khel Maidaan App", page_icon="🧒", layout="wide")
     
     # Create session state variable to track user login status
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
 
     # Create navigation
-    menu = ["Home", "Login", "Register", "Emotion Detection", "Hand Drawing Game"]
+    menu = ["Home", "Login", "Register", "Emotion Detection", "Hand Drawing Game", "Mental Math Game", "Chatbot", "Digital Wellbeing"]
     choice = st.sidebar.selectbox("Select an option", menu)
     
     if choice == "Home":
@@ -259,6 +387,21 @@ def main():
             hand_game_page()
         else:
             st.warning("Please log in first to access this feature.")
+
+    elif choice == "Mental Math Game":
+        if st.session_state.logged_in:
+            mental_math_game_page()
+        else:
+            st.warning("Please log in first to access this feature.")  
+
+    elif choice == "Chatbot":
+        if st.session_state.logged_in:
+            chatbot_page()
+        else:
+            st.warning("Please log in first to access this feature.")      
+
+    elif choice == "Digital Wellbeing":
+        digital_wellbeing_page()                
 
 if __name__ == "__main__":
     main()
